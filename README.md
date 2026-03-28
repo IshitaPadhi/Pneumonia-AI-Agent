@@ -58,15 +58,15 @@ Perfect — I’ll clean this into a **proper formatted GitHub-ready section (Ma
 ```
 
 Pneumonia-AI-Agent/
-│
-├── app/                # Streamlit application
-├── agent/              # AI decision logic
-├── database/           # MySQL connection logic
-├── model/              # Trained model files
-├── notebooks/          # Training and experimentation
-├── temp/               # Temporary images and reports
-├── README.md
-├── requirements.txt
+|
+|-- app/ (Streamlit application)
+|-- agent/ (AI decision logic)
+|-- database/ (MySQL connection logic)
+|-- model/ (Trained model files)
+|-- notebooks/ (Training and experimentation)
+|-- temp/ (Temporary images and reports)
+|-- README.md
+|-- requirements.txt
 
 ````
 
