@@ -46,19 +46,31 @@ User → Upload X-ray → Model Prediction → Grad-CAM Visualization → AI Adv
 - Libraries: OpenCV, NumPy, Matplotlib, Seaborn
 
 ---
+Perfect — I’ll clean this into a **proper formatted GitHub-ready section (Markdown)** + give you **exact commands after**.
 
+---
+
+# 📄 ✅ READY-TO-PASTE (FORMATTED VERSION)
+
+Copy this directly into your `README.md`:
+
+```markdown
 ## Project Structure
+
+```
+
 Pneumonia-AI-Agent/
 │
-├── app/ # Streamlit application
-├── agent/ # AI decision logic
-├── database/ # MySQL connection logic
-├── model/ # Trained model files
-├── notebooks/ # Training and experimentation
-├── temp/ # Temporary images and reports
+├── app/                # Streamlit application
+├── agent/              # AI decision logic
+├── database/           # MySQL connection logic
+├── model/              # Trained model files
+├── notebooks/          # Training and experimentation
+├── temp/               # Temporary images and reports
 ├── README.md
 ├── requirements.txt
 
+````
 
 ---
 
@@ -69,20 +81,46 @@ Pneumonia-AI-Agent/
 ```bash
 git clone https://github.com/IshitaPadhi/Pneumonia-AI-Agent.git
 cd Pneumonia-AI-Agent
+````
 
-Step 2: Create virtual environment
+---
+
+### Step 2: Create virtual environment
+
+```bash
 python -m venv .venv
 .venv\Scripts\activate
-Step 3: Install dependencies
+```
+
+---
+
+### Step 3: Install dependencies
+
+```bash
 pip install -r requirements.txt
-Database Setup
-Step 1: Start MySQL using XAMPP
+```
 
-Ensure that MySQL service is running.
+---
 
-Step 2: Create database
+## Database Setup
+
+### Step 1: Start MySQL
+
+Start MySQL service using XAMPP.
+
+---
+
+### Step 2: Create database
+
+```sql
 CREATE DATABASE pneumonia_db;
-Step 3: Create table
+```
+
+---
+
+### Step 3: Create table
+
+```sql
 CREATE TABLE patients (
     patient_id VARCHAR(50),
     name VARCHAR(100),
@@ -94,44 +132,73 @@ CREATE TABLE patients (
     report TEXT,
     image_path TEXT
 );
-Step 4: Configure environment variables
+```
 
-Create a .env file in the root directory:
+---
 
+### Step 4: Configure environment variables
+
+Create a `.env` file in the root directory:
+
+```
 DB_HOST=localhost
 DB_USER=root
 DB_PASSWORD=
 DB_NAME=pneumonia_db
-Running the Application
+```
+
+---
+
+## Running the Application
+
+```bash
 streamlit run app/app_pro.py
+```
 
 Then open in browser:
 
+```
 http://localhost:8501
-Usage
-Enter patient details
-Upload a chest X-ray image
-Run prediction
-View:
-Predicted class
-Confidence score
-Grad-CAM heatmap
-AI-generated medical advice
-Download PDF report
-Data is automatically stored in MySQL database
-Future Work
-Improve model accuracy using EfficientNet or ResNet
-Train on larger and more diverse datasets
-Deploy system on cloud platforms
-Develop mobile or API-based interface
-Disclaimer
+```
+
+---
+
+## Usage
+
+1. Enter patient details
+2. Upload a chest X-ray image
+3. Run prediction
+4. View:
+
+   * Predicted class
+   * Confidence score
+   * Grad-CAM heatmap
+   * AI-generated medical advice
+5. Download PDF report
+6. Data is automatically stored in MySQL database
+
+---
+
+## Future Work
+
+* Improve model accuracy using EfficientNet or ResNet
+* Train on larger and more diverse datasets
+* Deploy system on cloud platforms
+* Develop mobile or API-based interface
+
+---
+
+## Disclaimer
 
 This system is intended for academic and research purposes only. It is not a substitute for professional medical diagnosis.
 
-Author
+---
+
+## Author
 
 Ishita Padhi
 
+````
 
 ---
 
