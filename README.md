@@ -210,23 +210,7 @@ This system is intended for academic and research purposes only. It is not a sub
 - Bacterial Case: [Watch Video](https://www.youtube.com/watch?v=CHILbGxx3AY)
 - Viral Case: [Watch Video](https://www.youtube.com/watch?v=EI8Cglr3mfA)
 
-## Database Integration
 
-The system stores predictions along with patient details in a MySQL database.
-
-Below is a sample screenshot of stored records:
-
-![Database Screenshot](![alt text](image.png))
-
----
-
-## Generated Report
-
-The system automatically generates a structured PDF report after prediction.
-
-Sample report preview:
-
-![PDF Report](![alt text](image-1.png))
 
 ## Author
 
