@@ -53,7 +53,6 @@ Perfect — I’ll clean this into a **proper formatted GitHub-ready section (Ma
 
 
 ```markdown
-Here’s a clean, **GitHub-ready Markdown** version of that section (properly formatted and readable):
 
 ```markdown
 ## 📁 Project Structure
