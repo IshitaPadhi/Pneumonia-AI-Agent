@@ -53,26 +53,29 @@ Perfect — I’ll clean this into a **proper formatted GitHub-ready section (Ma
 
 
 ```markdown
-## Project Structure
+Here’s a clean, **GitHub-ready Markdown** version of that section (properly formatted and readable):
+
+```markdown
+## 📁 Project Structure
 
 ```
 
 Pneumonia-AI-Agent/
-|
-|-- app/ (Streamlit application)
-|-- agent/ (AI decision logic)
-|-- database/ (MySQL connection logic)
-|-- model/ (Trained model files)
-|-- notebooks/ (Training and experimentation)
-|-- temp/ (Temporary images and reports)
-|-- README.md
-|-- requirements.txt
+│
+├── app/          # Streamlit application
+├── agent/        # AI decision logic
+├── database/     # MySQL connection logic
+├── model/        # Trained model files
+├── notebooks/    # Training and experimentation
+├── temp/         # Temporary images and reports
+├── README.md
+└── requirements.txt
 
 ````
 
 ---
 
-## Installation and Setup
+##  Installation and Setup
 
 ### Step 1: Clone the repository
 
@@ -80,6 +83,15 @@ Pneumonia-AI-Agent/
 git clone https://github.com/IshitaPadhi/Pneumonia-AI-Agent.git
 cd Pneumonia-AI-Agent
 ````
+
+```
+
+
+```
+
+
+
+
 
 ---
 
