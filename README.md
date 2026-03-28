@@ -46,7 +46,6 @@ User → Upload X-ray → Model Prediction → Grad-CAM Visualization → AI Adv
 - Libraries: OpenCV, NumPy, Matplotlib, Seaborn
 
 ---
-Perfect — I’ll clean this into a **proper formatted GitHub-ready section (Markdown)** + give you **exact commands after**.
 
 ---
 
