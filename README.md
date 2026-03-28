@@ -50,9 +50,7 @@ Perfect — I’ll clean this into a **proper formatted GitHub-ready section (Ma
 
 ---
 
-# 📄 ✅ READY-TO-PASTE (FORMATTED VERSION)
 
-Copy this directly into your `README.md`:
 
 ```markdown
 ## Project Structure
