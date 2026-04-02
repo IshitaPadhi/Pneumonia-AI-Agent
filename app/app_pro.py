@@ -1,7 +1,6 @@
 import sys
 import os
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-
+sys.path.append(os.getcwd())
 import streamlit as st
 import cv2
 import numpy as np
@@ -10,15 +9,13 @@ from agent.agent import agent_decision
 from datetime import date
 
 # Optional DB
-# Optional DB
 try:
     from database.mysql_connect import insert_patient
     DB_ENABLED = True
 except Exception as e:
     DB_ENABLED = False
-    print("DB Import Error:", e)   # DEBUG
+    print("DB Import Error:", e)
 
-# Extra features
 from sklearn.metrics import confusion_matrix
 import seaborn as sns
 import matplotlib.pyplot as plt
@@ -26,7 +23,7 @@ from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 
 # ─────────────────────────────────────────────
-# PAGE CONFIG — must be first Streamlit call
+# PAGE CONFIG
 # ─────────────────────────────────────────────
 st.set_page_config(
     page_title="XPneumoNet · AI Pneumonia Diagnostics",
@@ -36,183 +33,246 @@ st.set_page_config(
 )
 
 # ─────────────────────────────────────────────
-# GLOBAL CSS — medical dark theme
+# GLOBAL CSS — light elegant medical theme
 # ─────────────────────────────────────────────
 st.markdown("""
 <style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Sora:wght@300;400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root {
-  --bg:         #070d14;
-  --surface:    #0e1825;
-  --surface2:   #152030;
-  --border:     #1e3048;
-  --accent:     #00c6ff;
-  --accent2:    #0072ff;
-  --green:      #00e5a0;
-  --amber:      #ffb830;
-  --red:        #ff4b6e;
-  --text:       #e4edf6;
-  --muted:      #5c7a99;
-  --font-ui:    'Sora', sans-serif;
-  --font-mono:  'DM Mono', monospace;
+  --bg:         #f5f7fa;
+  --white:      #ffffff;
+  --surface:    #ffffff;
+  --surface2:   #f0f4f8;
+  --border:     #e2e8f0;
+  --border2:    #cbd5e0;
+  --accent:     #2563eb;
+  --accent-lt:  #eff6ff;
+  --accent2:    #1d4ed8;
+  --teal:       #0891b2;
+  --teal-lt:    #ecfeff;
+  --green:      #059669;
+  --green-lt:   #ecfdf5;
+  --amber:      #d97706;
+  --amber-lt:   #fffbeb;
+  --red:        #dc2626;
+  --red-lt:     #fef2f2;
+  --text:       #0f172a;
+  --text2:      #334155;
+  --muted:      #64748b;
+  --muted2:     #94a3b8;
+  --font-ui:    'Plus Jakarta Sans', sans-serif;
+  --font-mono:  'JetBrains Mono', monospace;
+  --shadow-sm:  0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+  --shadow-md:  0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.04);
+  --shadow-lg:  0 10px 30px rgba(0,0,0,0.1), 0 4px 8px rgba(0,0,0,0.04);
 }
 
 html, body, [class*="css"] {
-  font-family: var(--font-ui);
-  background-color: var(--bg);
-  color: var(--text);
+  font-family: var(--font-ui) !important;
+  background-color: var(--bg) !important;
+  color: var(--text) !important;
+}
+
+/* Force Streamlit background */
+.stApp {
+  background-color: var(--bg) !important;
 }
 
 #MainMenu, footer, header { visibility: hidden; }
-.block-container { padding: 0 2rem 3rem 2rem; max-width: 1200px; }
+.block-container {
+  padding: 0 2.5rem 4rem 2.5rem !important;
+  max-width: 1280px !important;
+}
 
+/* ── Top Header ── */
 .xpn-header {
   display: flex;
   align-items: center;
-  gap: 1.2rem;
-  padding: 1.6rem 0 1rem 0;
-  border-bottom: 1px solid var(--border);
+  gap: 1rem;
+  padding: 1.8rem 0 1.4rem 0;
+  border-bottom: 2px solid var(--border);
   margin-bottom: 2rem;
 }
-.xpn-logo { font-size: 2.6rem; line-height: 1; }
+.xpn-logo-wrap {
+  width: 48px; height: 48px;
+  background: linear-gradient(135deg, #2563eb, #0891b2);
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 1.6rem;
+  box-shadow: 0 4px 12px rgba(37,99,235,0.25);
+  flex-shrink: 0;
+}
 .xpn-title-block h1 {
-  font-size: 1.65rem;
+  font-size: 1.45rem;
   font-weight: 700;
-  letter-spacing: -0.5px;
-  background: linear-gradient(90deg, var(--accent), var(--accent2));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--text);
   margin: 0 0 2px 0;
+  letter-spacing: -0.3px;
+}
+.xpn-title-block h1 span {
+  color: var(--accent);
 }
 .xpn-title-block p {
-  font-size: 0.78rem;
+  font-size: 0.73rem;
   color: var(--muted);
   font-family: var(--font-mono);
   margin: 0;
   letter-spacing: 0.04em;
 }
-.xpn-badge {
+.xpn-header-right {
   margin-left: auto;
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  color: var(--accent);
-  border: 1px solid var(--accent);
-  border-radius: 4px;
-  padding: 4px 10px;
-  letter-spacing: 0.06em;
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
 }
-
-.section-label {
+.xpn-badge {
   font-family: var(--font-mono);
   font-size: 0.68rem;
-  letter-spacing: 0.14em;
-  color: var(--muted);
-  text-transform: uppercase;
-  margin-bottom: 0.6rem;
+  color: var(--accent);
+  background: var(--accent-lt);
+  border: 1px solid #bfdbfe;
+  border-radius: 6px;
+  padding: 4px 12px;
+  letter-spacing: 0.04em;
+  font-weight: 500;
+}
+.xpn-status-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 0 3px var(--green-lt);
 }
 
+/* ── Card ── */
 .xpn-card {
-  background: var(--surface);
+  background: var(--white);
   border: 1px solid var(--border);
-  border-radius: 12px;
+  border-radius: 14px;
   padding: 1.4rem 1.6rem;
   margin-bottom: 1.2rem;
+  box-shadow: var(--shadow-sm);
 }
 .xpn-card-title {
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-family: var(--font-mono);
-  letter-spacing: 0.12em;
-  color: var(--accent);
+  letter-spacing: 0.1em;
+  color: var(--muted);
   text-transform: uppercase;
   margin-bottom: 1rem;
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  font-weight: 500;
 }
-.xpn-card-title::before {
-  content: '';
-  display: inline-block;
-  width: 6px; height: 6px;
+.xpn-card-title .dot {
+  width: 5px; height: 5px;
   border-radius: 50%;
   background: var(--accent);
+  flex-shrink: 0;
+}
+
+/* ── Section label ── */
+.section-label {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
 }
 
 /* ── Input overrides ── */
 div[data-testid="stTextInput"] label,
 div[data-testid="stNumberInput"] label {
   font-family: var(--font-mono) !important;
-  font-size: 0.72rem !important;
-  letter-spacing: 0.1em !important;
+  font-size: 0.69rem !important;
+  letter-spacing: 0.08em !important;
   color: var(--muted) !important;
   text-transform: uppercase !important;
+  font-weight: 500 !important;
 }
 div[data-testid="stTextInput"] input,
 div[data-testid="stNumberInput"] input {
   background: var(--surface2) !important;
-  border: 1px solid var(--border) !important;
+  border: 1.5px solid var(--border) !important;
   border-radius: 8px !important;
   color: var(--text) !important;
-  font-family: var(--font-mono) !important;
-  font-size: 0.9rem !important;
-  padding: 0.55rem 0.9rem !important;
+  font-family: var(--font-ui) !important;
+  font-size: 0.88rem !important;
+  padding: 0.5rem 0.85rem !important;
+  box-shadow: none !important;
+  transition: border-color 0.15s, box-shadow 0.15s !important;
 }
 div[data-testid="stTextInput"] input:focus,
 div[data-testid="stNumberInput"] input:focus {
   border-color: var(--accent) !important;
-  box-shadow: 0 0 0 3px rgba(0,198,255,0.12) !important;
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.1) !important;
+  background: var(--white) !important;
+}
+div[data-testid="stTextInput"] input::placeholder,
+div[data-testid="stNumberInput"] input::placeholder {
+  color: var(--muted2) !important;
 }
 
 /* ── File uploader ── */
 div[data-testid="stFileUploader"] > div {
   background: var(--surface2) !important;
-  border: 1.5px dashed var(--border) !important;
+  border: 2px dashed var(--border2) !important;
   border-radius: 10px !important;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, background 0.2s;
 }
 div[data-testid="stFileUploader"] > div:hover {
   border-color: var(--accent) !important;
+  background: var(--accent-lt) !important;
 }
 div[data-testid="stFileUploader"] label {
   font-family: var(--font-mono) !important;
-  font-size: 0.72rem !important;
-  letter-spacing: 0.1em !important;
+  font-size: 0.69rem !important;
+  letter-spacing: 0.08em !important;
   color: var(--muted) !important;
   text-transform: uppercase !important;
+  font-weight: 500 !important;
 }
 
-/* ── Buttons ── */
+/* ── Primary button ── */
 div[data-testid="stButton"] > button {
-  background: linear-gradient(135deg, var(--accent2), var(--accent)) !important;
+  background: var(--accent) !important;
   color: #fff !important;
   font-family: var(--font-ui) !important;
   font-weight: 600 !important;
   font-size: 0.88rem !important;
-  letter-spacing: 0.04em !important;
+  letter-spacing: 0.01em !important;
   border: none !important;
-  border-radius: 8px !important;
+  border-radius: 9px !important;
   padding: 0.65rem 2rem !important;
   width: 100% !important;
-  transition: opacity 0.2s, transform 0.15s !important;
-  box-shadow: 0 4px 20px rgba(0,114,255,0.35) !important;
+  box-shadow: 0 2px 8px rgba(37,99,235,0.3) !important;
+  transition: background 0.15s, box-shadow 0.15s, transform 0.1s !important;
 }
 div[data-testid="stButton"] > button:hover {
-  opacity: 0.9 !important;
+  background: var(--accent2) !important;
+  box-shadow: 0 4px 16px rgba(37,99,235,0.4) !important;
   transform: translateY(-1px) !important;
 }
+
+/* ── Download button ── */
 div[data-testid="stDownloadButton"] > button {
-  background: var(--surface2) !important;
+  background: var(--white) !important;
   color: var(--accent) !important;
-  border: 1px solid var(--accent) !important;
-  font-family: var(--font-mono) !important;
-  font-size: 0.8rem !important;
-  letter-spacing: 0.04em !important;
-  border-radius: 8px !important;
-  padding: 0.55rem 1.5rem !important;
+  border: 1.5px solid var(--accent) !important;
+  font-family: var(--font-ui) !important;
+  font-size: 0.85rem !important;
+  font-weight: 600 !important;
+  border-radius: 9px !important;
+  padding: 0.6rem 1.5rem !important;
   width: 100% !important;
+  box-shadow: var(--shadow-sm) !important;
+  transition: background 0.15s !important;
 }
 div[data-testid="stDownloadButton"] > button:hover {
-  background: rgba(0,198,255,0.1) !important;
+  background: var(--accent-lt) !important;
 }
 
 /* ── Images ── */
@@ -220,87 +280,203 @@ div[data-testid="stImage"] img {
   border-radius: 10px;
   border: 1px solid var(--border);
   width: 100% !important;
+  box-shadow: var(--shadow-sm);
+}
+
+/* ── Alert overrides ── */
+div[data-testid="stAlert"] {
+  border-radius: 8px !important;
+  font-family: var(--font-ui) !important;
+  font-size: 0.82rem !important;
 }
 
 /* ── Diagnosis pills ── */
 .diag-pill {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
   font-family: var(--font-mono);
-  font-size: 0.8rem;
-  padding: 4px 14px;
+  font-size: 0.75rem;
+  padding: 5px 14px;
   border-radius: 20px;
-  font-weight: 500;
-  letter-spacing: 0.06em;
+  font-weight: 600;
+  letter-spacing: 0.05em;
 }
-.pill-bacteria { background: rgba(255,75,110,0.15); color: var(--red); border: 1px solid var(--red); }
-.pill-virus    { background: rgba(255,184,48,0.15);  color: var(--amber); border: 1px solid var(--amber); }
-.pill-normal   { background: rgba(0,229,160,0.15);  color: var(--green); border: 1px solid var(--green); }
+.pill-bacteria {
+  background: var(--red-lt);
+  color: var(--red);
+  border: 1.5px solid #fecaca;
+}
+.pill-virus {
+  background: var(--amber-lt);
+  color: var(--amber);
+  border: 1.5px solid #fde68a;
+}
+.pill-normal {
+  background: var(--green-lt);
+  color: var(--green);
+  border: 1.5px solid #a7f3d0;
+}
 
 /* ── Stat row ── */
 .stat-row {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr;
-  gap: 0.8rem;
-  margin-bottom: 1.2rem;
+  gap: 0.85rem;
+  margin-bottom: 1.3rem;
 }
 .stat-box {
-  background: var(--surface2);
+  background: var(--white);
   border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 1rem;
+  border-radius: 12px;
+  padding: 1.1rem 1rem;
   text-align: center;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
 }
+.stat-box::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  border-radius: 12px 12px 0 0;
+}
+.stat-box.diag::before  { background: var(--accent); }
+.stat-box.conf::before  { background: var(--teal); }
+.stat-box.sev::before   { background: var(--amber); }
 .stat-box .val {
-  font-size: 1.6rem;
+  font-size: 1.5rem;
   font-weight: 700;
   font-family: var(--font-mono);
-  line-height: 1.1;
+  line-height: 1.2;
+  margin-bottom: 4px;
 }
 .stat-box .lbl {
-  font-size: 0.65rem;
+  font-size: 0.64rem;
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.1em;
-  margin-top: 4px;
   font-family: var(--font-mono);
+  font-weight: 500;
 }
 
 /* ── Probability bars ── */
 .prob-row {
   display: flex;
   align-items: center;
-  gap: 0.8rem;
-  margin-bottom: 0.7rem;
+  gap: 0.9rem;
+  margin-bottom: 0.75rem;
 }
 .prob-label {
   font-family: var(--font-mono);
-  font-size: 0.75rem;
-  width: 80px;
-  color: var(--muted);
+  font-size: 0.72rem;
+  width: 76px;
+  color: var(--text2);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   flex-shrink: 0;
+  font-weight: 500;
 }
 .prob-track {
   flex: 1;
   background: var(--surface2);
-  border-radius: 5px;
-  height: 6px;
+  border-radius: 999px;
+  height: 7px;
   overflow: hidden;
 }
-.prob-fill { height: 100%; border-radius: 5px; }
+.prob-fill {
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.5s ease;
+}
 .prob-pct {
   font-family: var(--font-mono);
-  font-size: 0.75rem;
-  width: 42px;
+  font-size: 0.73rem;
+  width: 40px;
   text-align: right;
-  color: var(--text);
+  color: var(--text2);
+  font-weight: 500;
 }
 
-hr.xpn { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+/* ── Advice card ── */
+.advice-card {
+  background: var(--accent-lt);
+  border: 1px solid #bfdbfe;
+  border-left: 4px solid var(--accent);
+  border-radius: 10px;
+  padding: 1rem 1.2rem;
+  font-size: 0.87rem;
+  line-height: 1.75;
+  color: var(--text2);
+}
+
+/* ── Divider ── */
+hr.xpn {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1.4rem 0;
+}
+
+/* ── Severity colors ── */
 .severity-high   { color: var(--red);   }
 .severity-medium { color: var(--amber); }
 .severity-low    { color: var(--green); }
+
+/* ── Disclaimer footer ── */
+.xpn-disclaimer {
+  margin-top: 1.2rem;
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  color: var(--muted2);
+  line-height: 1.8;
+  border-top: 1px solid var(--border);
+  padding-top: 0.9rem;
+}
+
+/* ── Idle placeholder ── */
+.idle-wrap {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 3.5rem 2rem;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+}
+.idle-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  line-height: 1;
+}
+.idle-title {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text2);
+  margin-bottom: 0.5rem;
+  letter-spacing: 0.01em;
+}
+.idle-sub {
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.75;
+  max-width: 300px;
+  margin: 0 auto 1.4rem auto;
+}
+.tech-tag {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.63rem;
+  color: var(--accent);
+  background: var(--accent-lt);
+  border: 1px solid #bfdbfe;
+  border-radius: 5px;
+  padding: 3px 10px;
+  margin: 3px;
+  font-weight: 500;
+}
+
+/* ── Pyplot white background ── */
+.stPlotly, [data-testid="stPyplotUserWarning"] { display: none !important; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -310,15 +486,17 @@ hr.xpn { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
 # ─────────────────────────────────────────────
 st.markdown("""
 <div class="xpn-header">
-  <div class="xpn-logo">🫁</div>
+  <div class="xpn-logo-wrap">🫁</div>
   <div class="xpn-title-block">
-    <h1>XPneumoNet</h1>
+    <h1>X<span>Pneumo</span>Net</h1>
     <p>EXPLAINABLE AI · PNEUMONIA DETECTION · DenseNet-121 + Grad-CAM</p>
   </div>
-  <div class="xpn-badge">v1.0 · CLINICAL DEMO</div>
+  <div class="xpn-header-right">
+    <div class="xpn-status-dot"></div>
+    <div class="xpn-badge">v1.0 · CLINICAL DEMO</div>
+  </div>
 </div>
 """, unsafe_allow_html=True)
-st.write("🛠 DB Enabled:", DB_ENABLED)
 
 
 # ─────────────────────────────────────────────
@@ -369,21 +547,34 @@ def generate_pdf(patient_id, name, prediction, confidence, severity, report):
 # ─────────────────────────────────────────────
 # LAYOUT
 # ─────────────────────────────────────────────
-left, right = st.columns([1, 1.7], gap="large")
+left, right = st.columns([1, 1.75], gap="large")
 
 with left:
-    st.markdown('<div class="xpn-card">', unsafe_allow_html=True)
-    st.markdown('<div class="xpn-card-title">Patient Information</div>', unsafe_allow_html=True)
+    # ── Patient Info ──
+    st.markdown("""
+    <div class="xpn-card">
+      <div class="xpn-card-title"><span class="dot"></span>Patient Information</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Re-open the card visually by nesting Streamlit widgets between styled divs
+    st.markdown('<div style="background:white; border:1px solid #e2e8f0; border-radius:14px; padding:0 1.4rem 1.4rem 1.4rem; margin-top:-1.2rem; margin-bottom:1.2rem; box-shadow:0 1px 3px rgba(0,0,0,0.06);">', unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     with col1:
         patient_id = st.text_input("Patient ID", placeholder="PT-00421")
     with col2:
-        age = st.number_input("Age", min_value=0, max_value=120, value=0)
+        age = st.number_input("Age (yrs)", min_value=0, max_value=120, value=0)
     name = st.text_input("Full Name", placeholder="e.g. Rajesh Kumar")
     st.markdown('</div>', unsafe_allow_html=True)
 
-    st.markdown('<div class="xpn-card">', unsafe_allow_html=True)
-    st.markdown('<div class="xpn-card-title">Chest X-Ray Upload</div>', unsafe_allow_html=True)
+    # ── Upload ──
+    st.markdown("""
+    <div style="background:white; border:1px solid #e2e8f0; border-radius:14px; padding:1.2rem 1.4rem 0.4rem 1.4rem; margin-bottom:0.4rem; box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+      <div class="xpn-card-title"><span class="dot"></span>Chest X-Ray Upload</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.markdown('<div style="background:white; border:1px solid #e2e8f0; border-top:none; border-radius:0 0 14px 14px; padding:0 1.4rem 1.4rem 1.4rem; margin-top:-0.5rem; margin-bottom:1.2rem; box-shadow:0 1px 3px rgba(0,0,0,0.06);">', unsafe_allow_html=True)
     uploaded_file = st.file_uploader(
         "Drag & drop or browse — JPG / PNG / JPEG",
         type=["jpg", "png", "jpeg"],
@@ -396,15 +587,17 @@ with left:
     run = st.button("⚡  Run AI Diagnostic")
 
     st.markdown("""
-    <div style="margin-top:1rem; font-family:var(--font-mono); font-size:0.66rem;
-                color:var(--muted); line-height:1.7; border-top:1px solid var(--border); padding-top:0.8rem;">
+    <div class="xpn-disclaimer">
       ⚠ FOR RESEARCH &amp; EDUCATIONAL USE ONLY<br>
-      Not a substitute for clinical diagnosis.<br>
-      Model: DenseNet-121 · Classes: Bacteria / Virus / Normal
+      Not a substitute for professional clinical diagnosis.<br>
+      Model: DenseNet-121 &nbsp;·&nbsp; 3 Classes: Bacteria / Virus / Normal
     </div>
     """, unsafe_allow_html=True)
 
 
+# ─────────────────────────────────────────────
+# RESULTS PANEL
+# ─────────────────────────────────────────────
 with right:
     if run:
         if uploaded_file is not None:
@@ -441,48 +634,71 @@ with right:
                 except Exception as e:
                     st.warning(f"Database error: {e}")
 
-            pill_class = {"BACTERIA": "pill-bacteria", "VIRUS": "pill-virus", "NORMAL": "pill-normal"}.get(prediction, "pill-normal")
+            # ── Derived display values ──
+            pill_class = {
+                "BACTERIA": "pill-bacteria",
+                "VIRUS":    "pill-virus",
+                "NORMAL":   "pill-normal"
+            }.get(prediction, "pill-normal")
+
             severity_color = (
-                "severity-high"   if "high"   in severity.lower() else
-                "severity-medium" if "medium" in severity.lower() or "moderate" in severity.lower() else
+                "severity-high"   if "high"    in severity.lower() else
+                "severity-medium" if any(w in severity.lower() for w in ["medium", "moderate"]) else
                 "severity-low"
             )
-            conf_pct = int(confidence * 100)
-            conf_color = "var(--green)" if conf_pct >= 85 else "var(--amber)" if conf_pct >= 65 else "var(--red)"
 
-            # ── Summary stats ──
+            conf_pct = int(confidence * 100)
+            conf_color = (
+                "#059669" if conf_pct >= 85 else
+                "#d97706" if conf_pct >= 65 else
+                "#dc2626"
+            )
+
+            bar_colors = {
+                "BACTERIA": "#ef4444",
+                "NORMAL":   "#10b981",
+                "VIRUS":    "#f59e0b"
+            }
+
+            # ── Stat cards ──
             st.markdown(f"""
             <div class="stat-row">
-              <div class="stat-box">
-                <div class="val"><span class="diag-pill {pill_class}">{prediction}</span></div>
-                <div class="lbl">Diagnosis</div>
+              <div class="stat-box diag">
+                <div class="val">
+                  <span class="diag-pill {pill_class}">{prediction}</span>
+                </div>
+                <div class="lbl" style="margin-top:8px;">Diagnosis</div>
               </div>
-              <div class="stat-box">
+              <div class="stat-box conf">
                 <div class="val" style="color:{conf_color};">{conf_pct}%</div>
                 <div class="lbl">Confidence</div>
               </div>
-              <div class="stat-box">
-                <div class="val {severity_color}" style="font-size:1rem; padding-top:0.3rem;">{severity}</div>
+              <div class="stat-box sev">
+                <div class="val {severity_color}" style="font-size:1rem; padding-top:0.25rem;">{severity}</div>
                 <div class="lbl">Severity</div>
               </div>
             </div>
             """, unsafe_allow_html=True)
 
-            # ── Images ──
-            img_col1, img_col2 = st.columns(2)
+            # ── Side-by-side images ──
+            img_col1, img_col2 = st.columns(2, gap="medium")
             with img_col1:
                 st.markdown('<div class="section-label">Original X-Ray</div>', unsafe_allow_html=True)
                 st.image(file_path, use_container_width=True)
             with img_col2:
-                st.markdown('<div class="section-label">Grad-CAM Activation</div>', unsafe_allow_html=True)
+                st.markdown('<div class="section-label">Grad-CAM Activation Map</div>', unsafe_allow_html=True)
                 st.image(heatmap_path, use_container_width=True)
 
             st.markdown('<hr class="xpn">', unsafe_allow_html=True)
 
-            # ── Probability bars ──
-            st.markdown('<div class="xpn-card">', unsafe_allow_html=True)
-            st.markdown('<div class="xpn-card-title">Class Probability Distribution</div>', unsafe_allow_html=True)
-            bar_colors = {"BACTERIA": "var(--red)", "NORMAL": "var(--green)", "VIRUS": "var(--amber)"}
+            # ── Probability distribution ──
+            st.markdown("""
+            <div style="background:white; border:1px solid #e2e8f0; border-radius:14px;
+                        padding:1.2rem 1.5rem 1rem 1.5rem; margin-bottom:1.2rem;
+                        box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+              <div class="xpn-card-title"><span class="dot"></span>Class Probability Distribution</div>
+            """, unsafe_allow_html=True)
+
             for i, cls in enumerate(classes):
                 pct = int(pred[i] * 100)
                 st.markdown(f"""
@@ -494,73 +710,82 @@ with right:
                   <div class="prob-pct">{pct}%</div>
                 </div>
                 """, unsafe_allow_html=True)
+
             st.markdown('</div>', unsafe_allow_html=True)
 
-            # ── AI Advice ──
+            # ── AI Recommendation ──
             st.markdown(f"""
-            <div class="xpn-card">
-              <div class="xpn-card-title">AI Clinical Recommendation</div>
-              <p style="font-size:0.88rem; line-height:1.75; color:var(--text); margin:0;">{report}</p>
+            <div style="background:white; border:1px solid #e2e8f0; border-radius:14px;
+                        padding:1.2rem 1.5rem; margin-bottom:1.2rem;
+                        box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+              <div class="xpn-card-title"><span class="dot"></span>AI Clinical Recommendation</div>
+              <div class="advice-card">{report}</div>
             </div>
             """, unsafe_allow_html=True)
 
             # ── Confusion Matrix ──
-            st.markdown('<div class="xpn-card">', unsafe_allow_html=True)
-            st.markdown('<div class="xpn-card-title">Prediction Confidence Matrix</div>', unsafe_allow_html=True)
-            cm = confusion_matrix([class_index], [class_index])
-            fig, ax = plt.subplots(figsize=(3.5, 2.5))
-            fig.patch.set_facecolor("#0e1825")
-            ax.set_facecolor("#0e1825")
-            sns.heatmap(cm, annot=True, fmt="d", cmap="Blues", ax=ax,
-                        linewidths=0.5, linecolor="#1e3048",
-                        annot_kws={"fontsize": 11, "color": "white"})
-            ax.set_xlabel("Predicted", color="#5c7a99", fontsize=8)
-            ax.set_ylabel("Actual",    color="#5c7a99", fontsize=8)
-            ax.tick_params(colors="#5c7a99", labelsize=7)
-            for spine in ax.spines.values():
-                spine.set_edgecolor("#1e3048")
-            plt.tight_layout()
-            st.pyplot(fig)
-            st.markdown('</div>', unsafe_allow_html=True)
+            st.markdown("""
+            <div style="background:white; border:1px solid #e2e8f0; border-radius:14px;
+                        padding:1.2rem 1.5rem 0.5rem 1.5rem; margin-bottom:1.2rem;
+                        box-shadow:0 1px 3px rgba(0,0,0,0.06);">
+              <div class="xpn-card-title"><span class="dot"></span>Prediction Confidence Matrix</div>
+            </div>
+            """, unsafe_allow_html=True)
 
-            # ── PDF download ──
+            cm = confusion_matrix([class_index], [class_index])
+            fig, ax = plt.subplots(figsize=(4, 3))
+            fig.patch.set_facecolor("#ffffff")
+            ax.set_facecolor("#ffffff")
+            sns.heatmap(
+                cm, annot=True, fmt="d",
+                cmap=sns.light_palette("#2563eb", as_cmap=True),
+                ax=ax, linewidths=1, linecolor="#e2e8f0",
+                annot_kws={"fontsize": 12, "color": "#0f172a", "fontweight": "bold"}
+            )
+            ax.set_xlabel("Predicted", color="#64748b", fontsize=8, labelpad=8)
+            ax.set_ylabel("Actual",    color="#64748b", fontsize=8, labelpad=8)
+            ax.tick_params(colors="#64748b", labelsize=7)
+            for spine in ax.spines.values():
+                spine.set_edgecolor("#e2e8f0")
+            fig.tight_layout(pad=1.5)
+            st.pyplot(fig)
+
+            st.markdown("<div style='height:0.5rem'></div>", unsafe_allow_html=True)
+
+            # ── PDF ──
             pdf_file = generate_pdf(patient_id, name, prediction, confidence, severity, report)
             with open(pdf_file, "rb") as f:
-                st.download_button("📄  Download Full Diagnostic Report", f, file_name="xpneumonet_report.pdf")
+                st.download_button(
+                    "📄  Download Full Diagnostic Report",
+                    f,
+                    file_name="xpneumonet_report.pdf"
+                )
 
         else:
             st.markdown("""
-            <div class="xpn-card" style="text-align:center; padding:2.5rem 1rem; color:var(--muted);">
-              <div style="font-size:2.5rem; margin-bottom:0.8rem;">🩻</div>
-              <div style="font-family:var(--font-mono); font-size:0.8rem; letter-spacing:0.08em;">
-                NO IMAGE UPLOADED<br>
-                <span style="font-size:0.7rem;">Please upload a chest X-ray to begin analysis</span>
-              </div>
+            <div class="idle-wrap">
+              <div class="idle-icon">🩻</div>
+              <div class="idle-title">No Image Uploaded</div>
+              <div class="idle-sub">Please upload a chest X-ray on the left panel before running the diagnostic.</div>
             </div>
             """, unsafe_allow_html=True)
 
     else:
+        # ── Idle / welcome state ──
         st.markdown("""
-        <div class="xpn-card" style="text-align:center; padding:3rem 1.5rem;">
-          <div style="font-size:3rem; margin-bottom:1rem;">🫁</div>
-          <div style="font-family:var(--font-mono); font-size:0.85rem; color:var(--accent);
-                      letter-spacing:0.1em; margin-bottom:0.6rem;">AWAITING SCAN</div>
-          <div style="font-size:0.8rem; color:var(--muted); line-height:1.7; max-width:320px; margin:0 auto;">
-            Enter patient details, upload a chest X-ray,
-            and click <strong style="color:var(--text);">Run AI Diagnostic</strong> to receive
-            an explainable AI prediction with Grad-CAM visualisation.
+        <div class="idle-wrap">
+          <div class="idle-icon">🫁</div>
+          <div class="idle-title">Ready for Analysis</div>
+          <div class="idle-sub">
+            Fill in the patient details, upload a chest X-ray,
+            and click <strong>Run AI Diagnostic</strong> to receive an
+            explainable AI prediction with Grad-CAM visualisation.
           </div>
-          <hr class="xpn" style="max-width:280px; margin:1.5rem auto;">
-          <div style="display:flex; justify-content:center; gap:1.2rem; flex-wrap:wrap;">
-            <span style="font-family:var(--font-mono); font-size:0.65rem; color:var(--muted);
-                         background:var(--surface2); border:1px solid var(--border);
-                         border-radius:4px; padding:3px 10px;">DenseNet-121</span>
-            <span style="font-family:var(--font-mono); font-size:0.65rem; color:var(--muted);
-                         background:var(--surface2); border:1px solid var(--border);
-                         border-radius:4px; padding:3px 10px;">Grad-CAM XAI</span>
-            <span style="font-family:var(--font-mono); font-size:0.65rem; color:var(--muted);
-                         background:var(--surface2); border:1px solid var(--border);
-                         border-radius:4px; padding:3px 10px;">3-Class Detection</span>
+          <div>
+            <span class="tech-tag">DenseNet-121</span>
+            <span class="tech-tag">Grad-CAM XAI</span>
+            <span class="tech-tag">3-Class Detection</span>
+            <span class="tech-tag">Monte Carlo Dropout</span>
           </div>
         </div>
         """, unsafe_allow_html=True)
