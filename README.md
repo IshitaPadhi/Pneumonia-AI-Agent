@@ -6,6 +6,8 @@
 ![TensorFlow](https://img.shields.io/badge/TensorFlow-2.x-FF6F00?style=flat&logo=tensorflow&logoColor=white)
 ![Streamlit](https://img.shields.io/badge/Streamlit-1.x-FF4B4B?style=flat&logo=streamlit&logoColor=white)
 ![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?style=flat&logo=mysql&logoColor=white)
+![Accuracy](https://img.shields.io/badge/Accuracy-86.5%25-brightgreen?style=flat)
+![MacroF1](https://img.shields.io/badge/Macro%20F1-0.859-blue?style=flat)
 ![License](https://img.shields.io/badge/License-MIT-green?style=flat)
 ![Status](https://img.shields.io/badge/Status-Active-brightgreen?style=flat)
 
@@ -59,9 +61,12 @@ XPneumoNet/
 │   ├── mysql_connect.py               # DB connection + all query functions
 │   └── schema.sql                     # MySQL table definition
 │
+├── assets/                            # Evaluation graphs and figures
+│
 ├── temp/                              # Runtime: uploaded images + heatmaps
 │
 ├── app.py                             # Main Streamlit application
+├── evaluate.py                        # Standalone evaluation script
 ├── .env                               # DB credentials (not committed)
 ├── requirements.txt
 └── README.md
@@ -89,15 +94,18 @@ XPneumoNet/
 | **Optimizer** | Adam |
 | **Explainability** | Grad-CAM (last convolutional layer) |
 | **Uncertainty** | Monte Carlo Dropout |
+| **Best Val Accuracy** | 88.0% (epoch 9) |
+| **Test Accuracy** | **86.5%** |
+| **Macro F1** | **0.859** |
 
 ### Model Comparison
 
 | Model | Val Accuracy | Notes |
 |---|---|---|
-| DenseNet-121 | **Best** | Primary model — selected for deployment |
-| ResNet-50 | — | Comparison baseline |
-| VGG-16 | — | Comparison baseline |
-| EfficientNet-B3 | — | Comparison baseline |
+| DenseNet-121 | **86.5% test acc** | Primary model — selected for deployment |
+| ResNet-50 | Lower | Comparison baseline |
+| VGG-16 | Lower | Comparison baseline |
+| EfficientNet-B3 | Lower | Comparison baseline |
 
 ---
 
@@ -110,6 +118,122 @@ XPneumoNet/
   - `VIRUS/` — Viral pneumonia X-rays
   - `NORMAL/` — Healthy lungs
 - **Preprocessing:** Resize to 224×224, normalise to [0, 1], augmentation applied during training
+
+### Dataset Distribution
+
+| Split | BACTERIA | NORMAL | VIRUS | Total |
+|---|---|---|---|---|
+| Train | 2530 | 1341 | 1345 | 5216 |
+| Val | 8 | 8 | 8 | 24 |
+| Test | 242 | 234 | 148 | 624 |
+
+> BACTERIA represents 47.5% of the overall dataset, NORMAL 27.0%, VIRUS 25.5%.
+
+<div align="center">
+  <img src="assets/dataset_distribution.png" width="800" alt="Dataset class distribution bar chart and pie chart"/>
+</div>
+
+---
+
+## 📊 Results
+
+### Summary
+
+| Metric | Value |
+|---|---|
+| **Overall Accuracy** | **86.5%** |
+| **Macro Avg Precision** | 0.859 |
+| **Macro Avg Recall** | 0.859 |
+| **Macro Avg F1-Score** | 0.859 |
+| **Test Set Size** | 624 images |
+
+### Per-Class Metrics
+
+| Class | Precision | Recall | F1-Score | Support | AUC-ROC | Avg Precision |
+|---|---|---|---|---|---|---|
+| **BACTERIA** | 0.874 | 0.888 | 0.881 | 242 | 0.957 | 0.934 |
+| **NORMAL** | 0.891 | 0.872 | 0.881 | 234 | 0.970 | 0.959 |
+| **VIRUS** | 0.812 | 0.818 | 0.815 | 148 | 0.944 | 0.825 |
+| **Macro Avg** | **0.859** | **0.859** | **0.859** | 624 | — | — |
+
+> The VIRUS class shows slightly lower scores due to inherent class imbalance (1345 vs 2530 BACTERIA training samples) and the radiologically ambiguous boundary between bacterial and viral consolidation patterns — consistent with published literature on this dataset.
+
+---
+
+### Confusion Matrix
+
+<div align="center">
+  <img src="assets/confusion_matrix.png" width="800" alt="Confusion matrix raw counts and normalised"/>
+</div>
+
+Key observations:
+- BACTERIA recall: **89%** — only 24 misclassified as NORMAL, 3 as VIRUS
+- NORMAL recall: **87%** — only 5 misclassified as BACTERIA
+- VIRUS recall: **82%** — 26 misclassified as BACTERIA (clinically expected overlap)
+
+---
+
+### Per-Class Precision, Recall & F1
+
+<div align="center">
+  <img src="assets/per_class_metrics.png" width="750" alt="Bar chart of per-class precision recall and F1 scores"/>
+</div>
+
+---
+
+### ROC Curves (One-vs-Rest)
+
+<div align="center">
+  <img src="assets/roc_curves.png" width="600" alt="ROC curves for each class showing AUC scores"/>
+</div>
+
+All three classes achieve AUC > 0.94, indicating strong discriminative ability even when classification confidence is borderline.
+
+---
+
+### Precision-Recall Curves
+
+<div align="center">
+  <img src="assets/precision_recall_curves.png" width="600" alt="Precision-recall curves for each class"/>
+</div>
+
+---
+
+### Training History
+
+<div align="center">
+  <img src="assets/training_history.png" width="800" alt="DenseNet-121 training accuracy and loss over 10 epochs"/>
+</div>
+
+Model converges steadily over 10 epochs. Best validation accuracy of **88.0%** was achieved at epoch 9. Train and val curves track closely, indicating no significant overfitting.
+
+---
+
+### Model Confidence Distribution
+
+<div align="center">
+  <img src="assets/confidence_distribution.png" width="750" alt="Violin plot of model confidence per true class"/>
+</div>
+
+NORMAL predictions cluster tightly near 1.0 confidence. BACTERIA and VIRUS show wider spread — consistent with the higher visual similarity between those two classes.
+
+---
+
+### Grad-CAM Explainability
+
+<div align="center">
+  <img src="assets/gradcam.png" width="600" alt="Grad-CAM heatmaps showing model attention on chest X-rays for each class"/>
+</div>
+
+Grad-CAM confirms the model attends to clinically relevant lung regions. Bacterial cases show focal consolidation patterns; viral cases show more diffuse bilateral attention.
+
+---
+
+### Classification Results Summary
+
+<div align="center">
+  <img src="assets/results_summary.png" width="700" alt="XPneumoNet classification results summary table"/>
+</div>
 
 ---
 
@@ -143,8 +267,8 @@ CREATE TABLE patients (
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/<your-username>/xpneumonet.git
-cd xpneumonet
+git clone https://github.com/IshitaPadhi/Pneumonia-AI-Agent.git
+cd Pneumonia-AI-Agent
 ```
 
 ### 2. Install dependencies
@@ -196,21 +320,6 @@ streamlit run app.py
 
 ---
 
-## 📊 Results
-
-> *Update with your actual evaluation metrics after training*
-
-| Metric | BACTERIA | VIRUS | NORMAL |
-|---|---|---|---|
-| Precision | — | — | — |
-| Recall | — | — | — |
-| F1-Score | — | — | — |
-| Avg Confidence | ~86% | ~75% | ~94% |
-
-The VIRUS class consistently shows lower confidence — suggesting this class benefits most from additional training data.
-
----
-
 ## 📦 Requirements
 
 ```
@@ -231,6 +340,8 @@ mysql-connector-python
 ## 🔮 Future Scope
 
 - [ ] Feedback loop — let clinicians mark predictions as correct/incorrect to build a retraining dataset
+- [ ] Class-weighted resampling to address VIRUS underrepresentation
+- [ ] Test-time augmentation (TTA) for improved inference confidence
 - [ ] DICOM file support for direct hospital system integration
 - [ ] Multi-GPU training pipeline
 - [ ] REST API wrapper for integration with hospital EMR systems
@@ -254,4 +365,3 @@ This project is licensed under the MIT License. See [LICENSE](LICENSE) for detai
 <div align="center">
   <sub>Built with ❤️ at MIT Manipal · For research and educational use only</sub>
 </div>
-
